@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<title>Boxplots</title>
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+
+<body>
+
+	<div style="padding: 50px; float:left;">
+	</div>
+
+	<div id="chart" style="width: 400px; float:left;">
+		<h3>Create a boxplot</h3>
+		<p>Click in the center of the blue strip to add points.</p>
+		<input type="radio" name="point" onClick="addPoint()" checked> Add points
+		<input type="radio" name="point" onClick="removePoint()"> Remove points
+		<svg width="200" height="800">
+			<rect x="100" y="10" width="100" height="360" fill="aliceblue">
+			</rect>
+		</svg>
+	</div>
+
+	<div style="width: 400px; float: left;">
+		<h3>How to Read a Boxplot</h3>
+		<i>Author: Kevin Gao(wg2311), Hima Bindu Bhardwaj (hb2635)</i>
+		<hr>
+		<p id="position"></p>
+		<hr>
+		<p id="info"></p>
+	</div>
+
+
+	<script type="text/javascript">
+		var flg = true; // Global add flag
+		var data = []; // Global data
+		var outliers = []; //Global outlier
+		var points = [];  // Global points
+		var outOfRange = true;
+
+		//******************Init Cancavs*********************//
+		// set the dimensions and margins of the graph
+		var margin = { top: 10, right: 30, bottom: 30, left: 40 },
+			width = 400 - margin.left - margin.right,
+			height = 400 - margin.top - margin.bottom;
+
+		// append the svg object to the body of the page
+		var svg = d3.select("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+			.append("g")
+			.attr("transform",
+				"translate(" + margin.left + "," + margin.top + ")");
+		
+		// a few features for the intial box
+		var center = 100
+		var width = 50
+
+		var rect = svg.append("rect");
+
+		rect.attr("x", center - width / 2)
+			.attr("y", 0)
+		
+		//******************End of Cancavs*********************//
+		function addPoint() {
+			flg = true;
+		}
+		function removePoint() {
+			flg = false;
+		}
+		function getMousePosition(event) { //onclick event
+			// update point position - onclick event find mouse position x,y
+			// limit to blue rect range 
+			if(event.clientX < 208 || event.clientY < 131 || event.clientX > 308 || event.clientY > 490){
+				document.getElementById("position").innerHTML =
+				(flg ? "Add point " : "Remove point ") +
+				"Out of range, pelase click within the blue zone <br/>" 
+				return;
+			}else{
+				document.getElementById("position").innerHTML =
+				(flg ? "Add point " : "Remove point ") +
+				"at absolute position x: " + event.clientX +
+				" y: " + event.clientY + "<br/>" +
+				" Relative position x: " + (event.clientX - 208) +
+				" y: " + (100 - parseInt((event.clientY - 131) / 1.8)) + "<br/>";
+			}
+
+			// update points + -
+			if (flg) {
+				points.push({ x: event.clientX, y: event.clientY });
+			} else {
+				for (var i = 0; i < points.length; i++) {
+					if (event.clientX > points[i].x - 3 && event.clientX < points[i].x + 3 && event.clientY > points[i].y - 3 && event.clientY < points[i].y + 3 ) { //+-3
+						points.splice(i, 1);
+						break;
+					}
+				}
+			}
+			// update data
+			data = [];
+			for (var i = 0; i < points.length; i++) {
+				data.push(100 - parseInt((points[i].y - 131) / 1.8));		
+			}
+
+			// Compute summary statistics used for the box plot
+			var data_sorted = data.sort(d3.ascending)
+			var q1 = d3.quantile(data_sorted, .25)
+			var median = d3.quantile(data_sorted, .5)
+			var q3 = d3.quantile(data_sorted, .75)
+			var interQuantileRange = q3 - q1
+			var min = q1 - 1.5 * interQuantileRange
+			var max = q1 + 1.5 * interQuantileRange
+			
+			var low =  data_sorted[0]
+			var high = data_sorted[data_sorted.length - 1]
+
+			//update low and high after calculate outliers
+			outliers = [];
+			var data_withoutliers = [];
+			for(var i=0;i<data_sorted.length;i++){
+				if(data_sorted[i] < min){
+					outliers.push(data_sorted[i]);
+				}else if(data_sorted[i] > max){
+					outliers.push(data_sorted[i])
+				}else{
+					data_withoutliers.push(data_sorted[i]);
+				}
+			}
+			low = data_withoutliers[0];
+			high = data_withoutliers[data_withoutliers.length-1];
+
+			// update statics on the page
+			document.getElementById("info").innerHTML =
+				"Data values: <span style='color:blue'> " + data + "</span><br/>" +
+				"Qutliers: <span style='color:red'>" + outliers + "</span><br/>" +
+				"Upper whisker: <span style='color:grey'>" + high + "</span><br/>" +
+				"Q3: <span style='color:brown'>" + q3 + "</span><br/>" +
+				"Median: <span style='color:grey'>" + median + "</span><br/>" +
+				"Q1: <span style='color:brown'>" + q1 + "</span><br/>" +
+				"Lower whisker: <span style='color:grey'>" + low + "</span><br/>";
+
+			// update the main plot (points + boxplot in D3)
+			updateBoxPlot(data_withoutliers, low, high);
+			// update points:
+			updatePoints(points, min, max);
+		}
+		document.getElementById("chart").addEventListener("click", getMousePosition);
+
+		function updatePoints(points, min, max){
+			d3.select("svg").selectAll("circle").remove();
+			for (var i = 0; i < points.length; i++) {
+				if(100 - parseInt((points[i].y - 131) / 1.8) < min || 100 - parseInt((points[i].y - 131) / 1.8) > max){
+					//outliers
+					d3.select("svg")
+					.append('circle')
+					.attr("cx", points[i].x - 108)
+					.attr("cy", points[i].y - 120)
+					.attr("r", 3)
+					.attr("fill","red");
+				}else{
+					d3.select("svg")
+					.append('circle')
+					.attr("cx", points[i].x - 108)
+					.attr("cy", points[i].y - 120)
+					.attr("r", 3)
+					.attr("fill","black");
+				}
+			}
+
+		}
+
+		function addAllCircles(flg, x, y) {
+			if (flg) {
+				d3.select("svg")
+					.append('circle')
+					.attr("cx", points[i].x - 108)
+					.attr("cy", points[i].y - 120)
+					.attr("r", 3)
+					.attr("onclick", "removeThisCircle()");
+			}
+		}
+		function removeThisCircle(d) {
+			if (!flg) {
+				alert('remove!', this);
+				d3.select(this)
+					.exit()
+					.remove();
+			}
+		}
+		function updateBoxPlot(data, min, max) {
+			//******************Clear Box Plot*********************//
+			// d3.select("svg").selectAll("g").remove().selectAll("line").remove().selectAll("rect").remove();
+			// update: move to animation
+			//******************Repaint D3 Box Plot*********************//
+			// re-load statistics used for the box:
+			var data = data;
+			var data_sorted = data.sort(d3.ascending)
+			var q1 = d3.quantile(data_sorted, .25)
+			var median = d3.quantile(data_sorted, .5)
+			var q3 = d3.quantile(data_sorted, .75)
+			var min = min;
+			var max = max;
+
+			// Show the Y scale
+			var scaleY = d3.scaleLinear()
+				.domain([-100, 100])
+				.range([height, 0]);
+			svg.call(d3.axisLeft(scaleY))
+
+			svg.selectAll("line").remove()
+
+			// show the vertical line
+			svg
+				.append("line")
+				.attr("x1", center)
+				.attr("x2", center)
+				.attr("y1", scaleY(min))
+				.attr("y2", scaleY(max))
+				.attr("stroke", "black")
+
+			// Show the box
+			rect
+				.transition()
+				.duration(1500)
+				.attr("x", center - width / 2)
+				.attr("y", scaleY(q3))
+				.attr("height", (scaleY(q1) - scaleY(q3)))
+				.attr("width", width)
+				.attr("stroke", "black")
+				.style("fill", "#69b3a2")
+			
+			// show median, min and max horizontal lines
+			svg				
+				.selectAll("toto")
+				.data([min, median, max])
+				.enter()
+				.append("line")
+				.attr("x1", center - width / 2)
+				.attr("x2", center + width / 2)
+				.attr("y1", function (d) { return (scaleY(d)) })
+				.attr("y2", function (d) { return (scaleY(d)) })
+				.attr("stroke", "black")
+			
+		}
+	</script>
+
+</body>
+
+</html>
