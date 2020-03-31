@@ -1,0 +1,217 @@
+---
+title: "EDAV Fall 2019 PSet 3"
+output: html_document
+---
+
+Read *Graphical Data Analysis with R*, Ch. 6, 7
+
+Grading is based both on your graphs and verbal explanations. Follow all best practices as discussed in class.
+
+Data cleaning: for many of the questions, you will have to clean up the data more than in past assignments. Labels do not have to perfect but they have to be legible. Often it is helpful to shorten or abbreviate labels: this can be done before plotting or at times within the plot functions. You may make any changes to the data as appropriate before plotting, including renaming column names and the like. Be sure though to include all adjustments in your scripts.
+
+```{r setup, include=FALSE}
+ # keep this chunk in your .Rmd file
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(devtools)
+library(tidyverse)
+library(ggmosaic)
+library("readxl")
+library("HH")
+ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+    
+### 1. Coal Emissions
+
+Data: https://datadiscovery.nlm.nih.gov/Environmental-Health/TOXMAP-EPA-Clean-Air-Markets-2016-Coal-Emissions/n97u-wtk7
+
+(OK to manually download `.csv` file)
+
+(a) Using `parcoords::parcoords()`, create an interactive parallel coordinate plot of `SO2`, `NOx`, `CO2`, `Heat Input` and `Gross Load`. Each line in the plot should represent one coal plant. Note any patterns.
+
+```{r}
+
+library(parcoords)
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+
+df <- read.csv("pset3data.csv")
+parcoords(df[,c("SO2", "NOx", "CO2", "Heat.Input", "Gross.Load")], brushMode = '1D-axes', reorderable = TRUE, rownames = FALSE)
+doit <- function(x) {(x - min(x, na.rm=TRUE))/(max(x,na.rm=TRUE) -
+                                                 min(x, na.rm=TRUE))}
+normed <- as.data.frame(lapply(df[c(5:12)], doit))
+parcoords(normed[,c("SO2", "NOx", "CO2", "Heat.Input", "Gross.Load")], brushMode = '1D-axes', reorderable = TRUE, rownames = FALSE)
+
+
+```
+On observing the plot, we can see that there is a negative correlation between NOx and the other values. But this does not necessarily mean that the level/amount of NOx in the coal plant is more than that of others. When we normalize the values (second plot), we see that the same relationship holds between the variables. The negative correlation can be explained by saying that in the range of NOX, NOx takes the higher values than others variables. We cannot decide if the levels of NOx are harmful just by this observation. For knowing that, we need to know the range of the level of NOx which is harmful (sceintific knowledge/domain expertise). From the graph, all we can say is that SO2 seems to have negative correlation with NOx; NOx and CO2 have negative correlation as well. CO2, Heat.Input and gross.Load have positive correlations.
+
+(b) Create a second interactive parallel coordiante plot, with the lines colored by state. Include only the states with more than 15 plants. Do any new patterns emerge? Explain briefly.
+
+```{r}
+library(dplyr)
+library(parcoords)
+df$state <- substr(df$Location,1,2) #To create a new column with only the state name
+df1 <- df %>%
+  group_by(state) %>%
+  mutate(Len = n()) %>%
+  filter(Len > 15)
+  parcoords(df1[,c("SO2", "NOx", "CO2", "Heat.Input", "Gross.Load","state")], brushMode = '1D-axes', reorderable = TRUE, color = list(colorScale = "scaleOrdinal", colorBy = "state", colorScheme = "schemeCategory10"), withD3 = TRUE, rownames = FALSE)
+
+```
+
+The relationships between NOx, CO2, etc remains the same. This graph helps to observe the state of presence of gases and also the heat load, etc in different states (with more than 15 plants). For example, Illionois has lesser heat input and gross load when compared to Indiana. the state with a plant that reaches maximum CO2 level is IN. Same for SO2 woul be TX.
+
+(c) What do `SO2`, `NOx` and `CO2` stand for? Briefly describe why each is harmful.
+SO2 stands for sulphur dioxide, NOx stands for oxides of nitrogen and CO2 stands for carbon dioxide.
+(i)Sulfur dioxide affects the respiratory system, particularly lung function, and can irritate the eyes. Sulfur dioxide irritates the respiratory tract and increases the risk of tract infections. It causes coughing, mucus secretion and aggravates conditions such as asthma.
+(ii) Nitrogen dioxide is an irritant gas, which at high concentrations causes inflammation of the airways.
+(iii)Higher concentrations of CO2 can affect respiratory function and cause excitation followed by depression of the central nervous system. A high concentration can displace oxygen in the air.
+
+### 2. Planets
+
+Using **rvest**, scrape the data from this table: https://nssdc.gsfc.nasa.gov/planetary/factsheet/ (hint: `html_table` is helpful). Remove `MOON` data. Then, using `GGally::ggparcoord()`, create two parallel coordinate plots of the numerical variables in the dataset, one colored by the value of `Ring System?` and one colored by planet name. In both cases, each line should represent one planet. Use `coord_flip` so the variable names are easier to read.  Describe any patterns you find.
+
+```{r}
+
+library(rvest)
+library(gsubfn)
+library(tidyverse)
+library(GGally)
+webpage <- read_html("https://nssdc.gsfc.nasa.gov/planetary/factsheet/") #webpage
+table <- data.frame(html_nodes(webpage, "table") %>% html_table(header = TRUE)) #load into a dataframe table
+table$MOON <- NULL #remove moon column
+table <- gather(table, key = "planets", values, -"Var.1") %>% spread("Var.1", values) # to transpose the table
+colnames(table)[colnames(table)=="Surface Pressure (bars)"] <- "pressure" #to remove the pressure column
+table$pressure <- NULL # delete the pressure column
+colnames(table)[colnames(table)=="Ring System?"] <- "Ring.System" #rename ring
+removeComma= function(s) {gsub(",", "", s, fixed = TRUE)} #function to remove commas from numeric values
+table[,] <- sapply(table[,], removeComma) # function applied to all values
+for (i in c(3:7,9:19,21)){
+  table[,i] <- as.numeric(table[,i]) #convert all values to integers
+}
+ggparcoord(table, columns = c(3:7,9:19,21), groupColumn = 20, scale="uniminmax") + coord_flip() + xlab(" ") + ylab(" ")   #plot with coloring a/c to ring
+
+#2nd part of Q2
+library(tibble)
+library(GGally)
+ggparcoord(table, columns = c(3:7,9:19,21), groupColumn = "planets", scale = 'uniminmax') + coord_flip() + xlab(' ') + ylab(' ')#plot with coloring a/c to rowname (planet)
+
+
+```
+
+The graph colored by the presence of ring system helps to find similarities in properties of planets dependind on the presence of ring systems. We observe a bigger clustering of values to the left for planets that have ring systems. The variables for which their values are high include number of moons, mass, diameter etc which makes sense because bigger planets have higher magnetic force duw to which they attract other celestial bodies as moons. The graph where the lines are colored for each planet, we can observe and compare the characteristics of different planets. For example: pluto has a lower mass value than jupiter.
+
+### 3. Heart Disease
+
+Data: four data frames that begin with `heart_disease` in the **ucidata** package
+
+Packages: You may use **vcd** or **ggmosaic**.
+
+(a) Create three mosaic plots, each involving two categorical variables from `heart_disease_cl` and interpret the plots. (You may reuse variables, for example X ~ Y and X ~ Z).
+```{r}
+library(ucidata)
+
+cl <- heart_disease_cl
+ggplot(data = cl)+
+  geom_mosaic(aes(x = product( cp, sex), fill= sex), na.rm = TRUE)+
+  labs(x = "sex", y = "cp")
+  
+
+ggplot(data = cl)+
+  geom_mosaic(aes(x = product(cp,thal), fill= thal), na.rm = TRUE)+
+  labs(x = "thal", y = "cp")
+
+ggplot(data = cl)+
+  geom_mosaic(aes(x = product(cp,slope), fill= slope), na.rm = TRUE)+
+  labs(x = "slope", y = "cp")
+```
+There is about equal possibility for male and female to have different cp. If a patient has reverseable defect or fixed defect, then he or she is more likely to have asymptomatic cp. Also, if the slope of a patient is flast, then he or she is more likeyly to have asymptomatic cp. 
+There are a small number of patients who have fixed defect and downsloping slope.
+
+
+
+(b) Combine the four heart disease datasets and create a mosaic plot showing chest pain by sex and location. Describe any patterns.
+```{r}
+ch <- heart_disease_ch
+ch['loc'] <- "ch"
+hu <- heart_disease_hu
+hu['loc'] <- "hu"
+va <- heart_disease_va
+va['loc'] <- 'va'
+cl['loc'] <- 'cl'
+total <- rbind(ch,hu,va,cl)
+ggplot(data = total)+
+  geom_mosaic(aes(x = product(sex,loc), fill= sex), na.rm = TRUE)+
+  labs(x = "loc", y = "sex")+
+  facet_grid(cp~.)
+
+```
+We can see that in all four locations, there are more male patients than female ones. In va, there are few female patients, which is interesting. More research should be done to find out what the reason is. Also, the data contain more data from cl and hu than ch.
+Also, in cl, there are less female typical angina patients then those in ch and hu, but there are more female asymptomatic chest pain female patients instead. 
+
+
+
+### 4. District 3 Elementary Schools
+
+Recently, there has been much debate about the lack of racial and economic diversity at Manhattan District 3 elementary schools, part of a larger and long-standing controversy about iniquities in the New York City public school system as a whole.
+
+The *New York Times* article, "Rezoning Plan to Remake 3 Upper West Side Schools Will Proceed, City Says,"  (https://www.nytimes.com/2016/11/10/nyregion/rezoning-plan-for-3-upper-west-side-schools-will-proceed-city-says.html) (2016-11-10) identifies the 11 elementary schools in Manhattan District 3.
+
+For this question, we will analyze parent survey results for these schools.
+
+Data: https://www.schools.nyc.gov/about-us/reports/school-quality/nyc-school-survey
+
+
+(a) Choose one of the likert style questions from the 2019 parent survey and use a diverging stacked bar chart to show results for the 11 schools identified in the article referenced above.
+```{r}
+
+
+survey_2019 <- read_excel("2019-public-data-file_parent.xlsx", sheet = 2)
+help_children_learn <-survey_2019[c(2,4,5,6,7)]
+colnames(help_children_learn) <- c('SchoolName', 'Strongly_disagree', 'Disagree', 'Agree', 'Strongly_agree')
+help_children_learn <-help_children_learn[-c(1,2),]
+
+schools <- c('P.S. 199 JESSIE ISADOR STRAUS','P.S. 165 ROBERT E. SIMON', 'P.S. 145, THE BLOOMINGDALE SCHOOL', 'P.S. 163 ALFRED E. SMITH','P.S. 075 EMILY DICKINSON', 'P.S. 084 LILLIAN WEBER','P.S. 166 HENRY GRADSTEIN', 'P.S. 009 SARAH ANDERSON','P.S. 087 WILLIAM SHERMAN','P.S. 452','P.S. 191 PAUL ROBESON')
+target_school <- filter(help_children_learn,SchoolName %in% schools)
+```
+
+```{r}
+
+
+
+target_school <- transform(target_school, Strongly_disagree = as.numeric(Strongly_disagree), Disagree = as.numeric(Disagree),Agree = as.numeric(Agree),Strongly_agree = as.numeric(Strongly_agree))
+likert(SchoolName ~ ., data=target_school, positive.order = TRUE, main = "School staff regularly communicate with me about how I can help my child learn", xlab= "percent", ylab = "")
+```
+
+
+(b) Choose a question that was asked in 2014 and 2019 and compare results for the three schools discussed most in the article: P.S. 199, P.S. 191, and P.S. 452. You may use two separate diverging stacked bar charts or combine all the information in one.
+```{r}
+survey_2014 <- read_excel("2013_-_2014_Public_Data_File.xlsx", sheet = 2)
+visit_school_2019 <- survey_2019[c(2,8,9,10,11)]
+visit_school_2014 <- survey_2014[c(2,24,25,26,27)]
+colnames(visit_school_2014) <- c('SchoolName', 'Strongly_disagree', 'Disagree', 'Agree', 'Strongly_agree')
+colnames(visit_school_2019) <- c('SchoolName', 'Strongly_disagree', 'Disagree', 'Agree', 'Strongly_agree')
+visit_school_2019 <-visit_school_2019[-c(1,2),]
+visit_school_2014 <-visit_school_2014[-c(1,2),]
+
+schools_2019 <- c('P.S. 199 JESSIE ISADOR STRAUS','P.S. 452','P.S. 191 PAUL ROBESON')
+schools_2014 <- c('P.S. 199 Jessie Isador Straus','P.S. 452','P.S. 191 Paul Robeson')
+three_school_2019 <- filter(visit_school_2019,SchoolName %in% schools_2019)
+three_school_2014 <- filter(visit_school_2014,SchoolName %in% schools_2014)
+```
+
+```{r}
+
+
+#new_data <- tibble::rownames_to_column(target_school, var="Measure") 
+three_school_2014 <- transform(three_school_2014, Strongly_disagree = as.numeric(Strongly_disagree), Disagree = as.numeric(Disagree),Agree = as.numeric(Agree),Strongly_agree = as.numeric(Strongly_agree))
+three_school_2019 <- transform(three_school_2019, Strongly_disagree = as.numeric(Strongly_disagree), Disagree = as.numeric(Disagree),Agree = as.numeric(Agree),Strongly_agree = as.numeric(Strongly_agree))
+likert(SchoolName ~ ., data=three_school_2014, positive.order = TRUE, main = "My child's school offers me opportunities to visit my child's classroom", xlab= "percend", ylab = "")
+likert(SchoolName ~ ., data=three_school_2019, positive.order = TRUE, main = "My child's school offers me opportunities to visit my child's classroom", xlab= "percend", ylab = "")
+```
+(c) Interpret your findings of (b) in light of the reputations of the schools as presented in the article. Are they surprising or what you would have expected?
+According to graph of 2014, we can see that  P.S. 199, and P.S. 452 did not offer much opportunity to parents to visist the classrooms because they are overly crowded, which was just like what the article stated. And according the the graph of 2019, we can see that the problem was solved since most parents now had the chance to visit their children's classroom. The result was as expected.
+
