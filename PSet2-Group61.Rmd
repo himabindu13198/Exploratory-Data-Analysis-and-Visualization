@@ -1,0 +1,522 @@
+---
+author: Hima Bindu Bhardwaj (hb2635), Swarna Bharathi Mantena (sm4776)
+title: "EDAV Fall 2019 PSet 2"
+output: 
+  pdf_document: 
+    fig_height: 5
+    fig_width: 8
+---
+
+Read *Graphical Data Analysis with R*, Ch. 4, 5
+
+Grading is based both on your graphs and verbal explanations. Follow all best practices as discussed in class. Data manipulation should not be hard coded. That is, your scripts should be written to work for new data.
+
+```{r setup, include=FALSE}
+ # keep this chunk in your .Rmd file
+ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+    
+### 1. useR2016! survey
+
+[18 points]
+
+Data: `useR2016` dataset in the **forwards** package (available on CRAN)
+
+For parts (a) and (b):
+
+* Do not toss NAs.
+* Do some research to find the wording of the questions asked as relevant and include them in the titles of your graphs.
+* Include the dataset name, package name, and link to the question wording source in the graph caption.
+
+(a) Create a horizontal bar chart of the responses to Q20.
+
+#1a
+```{R}
+library("forwards")
+library("ggplot2")
+library("forcats")
+library("dplyr")
+
+df <- useR2016 %>% mutate(Q20=ifelse(is.na(Q20),"NA",as.character(Q20)))
+
+ggplot(df) +
+  geom_bar(position="dodge", aes(x= fct_rev(fct_infreq(Q20)), fill = 'red')) + 
+  guides(fill = FALSE) +
+  xlab("Responses")+ylab("Count")+coord_flip()+
+  ggtitle("Responses to preferred medium for R community news") +
+  labs(caption = "Dataset Name: UseR2016 
+       Package Name: forwards
+       Survey Questions Source: Help in R (?useR2016)")
+```
+  
+The bars are ordered from longest to lowest as is preferrable in horizontal bar charts (the longest bar catches attention swiftly and makes comprehension of the visualization easier) . The bar corresponding to NA values is moved from the top to avoid grabbing attention for Na values. 
+
+Description: Vast majority of survey responders wish to receive notifications/news from the r community through website. This is followed by a mailing list and the least preffered medium is Google +. Social media website preferences like Twitter, Facebok, Blogs etc can be related to the current prominance of these websites in general.
+
+(b) Create a vertical bar chart of the responses to Q11.
+
+```{r}
+library("forwards")
+library("ggplot2")
+library("forcats")
+
+ggplot(useR2016, aes(x= fct_infreq(Q11), fill = "orange")) +
+  geom_bar(position="dodge") + guides(fill = FALSE) + 
+  xlab("Time Period")+ylab("Count")+
+  ggtitle("Period of time of use of R")+
+  labs(caption = "Dataset Name: UseR2016
+       Package Name: forwards
+       Survey Questions Source: Help in R (?useR2016)")
+```
+Largest group of responses was received for 5-10 years of usage, followed by 2-5 years and the smallest group was of people who used R for less than 2 years. Therefore the event was attended by a group which consisted majority of mid level experienced users and minimum of newbies to R.
+
+(c) Create a horizontal stacked bar chart showing the proportion of respondents for each level of Q11 who are over 35 vs. 35 or under. Use a descriptive title. 
+```{r}
+library(tidyverse)
+
+df <- useR2016 %>% drop_na(Q11, Q3)
+library("forwards")
+library("ggplot2")
+library("forcats")
+ggplot(df, aes(x= fct_infreq(Q11), y =  (..count..)/sum(..count..), fill = "red")) +
+  geom_bar(aes(fill = Q3), position = "fill") +
+  ylim(0,1) +
+  coord_flip()+ ylab("Proportion") + xlab("Usage time period")+
+ggtitle("Breakdown/Proportion of responders' age\n according to the usage time period of R") + 
+labs(caption = "Dataset Name: UseR2016 
+     Package Name: forwards
+     Survey Questions Source: Help in R (?useR2016)")
+```
+
+
+
+(d) Create a horizontal stacked bar chart showing the proportional breakdown of Q11 for each level of Q3, faceted on Q2. Use a descriptive title. 
+```{r}
+library("ggplot2")
+
+library("tidyverse")
+df <- useR2016 %>% drop_na(Q11, Q3, Q2)
+ggplot(df, aes(x= fct_infreq(Q3), y =  (..count..)/sum(..count..), fill = "red")) +
+  geom_bar(aes(fill = Q11), position = "fill") +
+  ylim(0,1) +
+  coord_flip() +
+  ggtitle("Proportion of period of use\n per age group for different genders") + 
+  facet_wrap(~Q2)+
+  xlab("Age Group") + ylab("Proportion") +
+  labs(caption = "Dataset Name: UseR2016 
+       Package Name: forwards
+       Survey Questions Source: Help in R (?useR2016)")
+```  
+
+
+(e) For the next part, we will need to be able to add line breaks (`\n`) to long tick mark labels. Write a function that takes a character string and a desired approximate line length in number of characters and substitutes a line break for the first space after every multiple of the specified line length.
+
+```{r}
+arg <- "This is edav assignment and i am doing some edav stuff and it is very interesting so far"
+addn <- function(arg,num){
+  i = num
+    while( i <= nchar(arg)){
+      i = i + 1
+    while(substr(arg,i,i) != " " && i <= nchar(arg)){
+      i = i + 1
+    }
+    if(substr(arg,i,i) == " "){
+    arg <- paste(substr(arg, 1, i-1),'\n',substr(arg, i+1, nchar(arg)), sep = "")
+    }
+    i = i + num
+  }
+  return(arg)
+}
+cat(addn(arg,10))
+```
+
+(f) Create a horizontal bar chart that shows the percentage of positive responses for `Q13 - Q13_F`. Use your function from part (e) to add line breaks to the responses. Your graph should have one bar each for `Q13 - Q13_F`.
+
+```{r name, results = "hide"}
+library("ggplot2")
+library("dplyr")
+library("tidyverse")
+library("forwards")
+
+#CODE
+
+  addn <- function(arg,num){
+  i = num
+  while(i <= nchar(arg)){
+    i = i + 1
+    while(substr(arg,i,i) != " " && i <= nchar(arg)){
+      i = i + 1
+    }
+    if(substr(arg,i,i) == " "){
+      arg <- paste(substr(arg, 1, i-1),'\n',substr(arg, i+1, nchar(arg)), sep = "")
+    }
+    i = i + num
+  }
+  return(arg)
+  }
+  
+  new<-data.frame(a = c(useR2016[,"Q13"], useR2016[,"Q13_B"],
+                  useR2016[,"Q13_C"],useR2016[,"Q13_D"],useR2016[,"Q13_E"],useR2016[,"Q13_F"]))
+  new$a <- as.character(new$a)
+  new <- new %>% drop_na(a)
+  new<- new %>% rowwise() %>% mutate(added = addn(a,30))
+
+ggplot(new, aes( x = new$added, y = (..count..)/nrow(useR2016))) +
+  geom_bar(aes(fill = "blue")) +
+  ylab("Proportion of positive values") +
+  guides(fill = FALSE) +
+  xlab(new$added)+
+  coord_flip()+
+ggtitle("Responses to usage of R by survey responders")+
+  labs(caption = "Dataset Name: UseR2016 
+       Package Name: forwards
+       Survey Questions Source: Help in R (?useR2016)")
+
+```
+
+### 2. Rotten Tomatoes
+
+[18 points]
+
+To get the data for this problem, we'll use the **robotstxt** package to check that it's ok to scrape data from Rotten Tomatoes and then use the **rvest** package to get data from the web site.
+
+
+(a) Use the `paths_allowed()` function from **robotstxt** to make sure it's ok to scrape https://www.rottentomatoes.com/browse/box-office/. Then use **rvest** functions to find relative links to individual movies listed on this page. Finally, paste the base URL to each to create a character vector of URLs.
+
+Display the first six lines of the vector.
+
+```{r}
+#install.packages("robotstxt")
+library(robotstxt)
+paths_allowed("https://www.rottentomatoes.com/browse/box-office/")
+```
+'TRUE'implies that it is okay to scrape data from Rotten Tomatoes.
+
+```{r}
+#install.packages("rvest")
+options(stringsAsFactors=F)
+library(rvest)
+
+url <- "https://www.rottentomatoes.com/browse/box-office/?rank_id=1&country=us"
+#class(url)
+page <- read_html(url)
+
+links <- page %>% 
+         html_nodes(".left a") #SelectorGadget was used to get the CSS selector
+links_path <- links %>% 
+              html_attr("href")
+
+#adding the base url
+links_path <- paste("https://www.rottentomatoes.com",links_path, sep = "", collapse = NULL)
+head(links_path)
+#https://www.rottentomatoes.com/m/downton_abbey/ format
+#length(links_path)
+```
+
+
+
+
+(b) Write a function to read the content of one page and pull out the title, tomatometer score and audience score of the film. Then iterate over the vector of all movies using `do.call() / rbind() / lapply()` or `dplyr::bind_rows() / purrr::map()` to create a three column data frame (or tibble).
+
+Display the first six lines of your data frame.
+
+(Results will vary depending on when you pull the data.)
+
+
+```{r}
+library(dplyr)
+library(tidyverse)
+
+get_urlData <- function(page) {
+    page <- read_html(page) #just read the html once
+    
+    title <- page %>% 
+             html_nodes(xpath='//*[@id="topSection"]/div[2]/div[1]/h1') %>%      
+             html_text()
+    
+    tomatometer_score <- page %>%
+        html_nodes(xpath='//*[(@id = "tomato_meter_link")]//*[contains(concat( " ", @class, " " ),
+                              concat( " ", "mop-ratings-wrap__percentage", " " ))]') %>%
+        html_text() %>%
+        str_replace_all("\n","") %>% 
+        str_replace_all("%","") %>% 
+        str_trim(side = c("both"))
+  
+    audience_score <- page %>%
+        html_nodes(xpath='//*[contains(concat( " ", @class, " " ), concat( " ", 
+                   "audience-score", " " ))]//*[contains(concat( " ", @class, " " ),
+                   concat( " ", "mop-ratings-wrap__percentage", " " ))]') %>%
+        html_text() %>%
+        str_replace_all("\n","" ) %>% 
+        str_replace_all("%","") %>% 
+        str_trim(side = c("both"))
+
+    if (length(tomatometer_score) > 0) {
+      if (length(audience_score) > 0) {
+        data.frame(title,tomatometer_score,audience_score)
+      }
+    }
+}
+score_frame <- do.call("rbind", lapply(links_path, get_urlData))
+head(score_frame, 6)
+```
+
+For help, see this SO post: https://stackoverflow.com/questions/36709184/build-data-frame-from-multiple-rvest-elements
+
+Write your data to file so you don't need to scrape the site each time you need to access it.
+
+```{r}
+write.csv(score_frame,'score_frame.csv')
+
+```
+
+(c) Create a Cleveland dot plot of tomatometer scores.
+
+```{r ,fig.height=8}
+library("ucidata")
+library("tidyverse")
+library("ggplot2")
+# dotchart(strtoi(score_frame$tomatometer_score))
+theme_dotplot <- theme_bw(12)
+
+ggplot(score_frame) + geom_point(aes(y = title, x = strtoi(tomatometer_score)),color = "blue") +
+ theme_dotplot + xlab('Movie Name') + ylab('TomatoMeter-Score')+
+  ggtitle("Cleveland Dot Plot of\n TomatoMeter Score of Movies")+
+  labs(caption = "Data Source: Rotten tomatoes Website\n ")
+```
+(d) Create a Cleveland dot plot of tomatometer *and* audience scores on the same graph, one color for each. Sort by audience score.
+
+```{r, fig.height=8}
+library("ggplot2")
+score_frame$audience_score <- strtoi(score_frame$audience_score)
+score_frame$tomatometer_score <- strtoi(score_frame$tomatometer_score)
+ggplot(score_frame, aes(y = reorder(title,audience_score), x = audience_score ))  +
+  geom_point(aes( color = "Audience Score")) + xlab("scores") + ylab("Movie Title") + 
+  geom_point(aes(y = title, x = tomatometer_score, color = "TomatoMeter Score")) +
+  labs(caption = "Data Source: Rotten tomatoes Website\n ")
+```
+(e) Run your code again for the weekend of July 5 - July 7, 2019. Use **plotly** to create a scatterplot of audience score vs. tomatometer score with the ability to hover over the point to see the film title.
+options(stringsAsFactors=F)
+library(rvest)
+```{r, fig.height=8}
+url <- "https://www.rottentomatoes.com/browse/box-office/?rank_id=12&country=us"
+#class(url)
+page <- read_html(url)
+
+links <- page %>% 
+         html_nodes(".left a") #SelectorGadget was used to get the CSS selector
+links_path <- links %>% 
+              html_attr("href")
+
+#adding the base url
+links_path <- paste("https://www.rottentomatoes.com",links_path, sep = "", collapse = NULL)
+library(dplyr)
+library(tidyverse)
+
+get_urlData <- function(page) {
+    page <- read_html(page) #just read the html once
+    
+    title <- page %>% 
+             html_nodes(xpath='//*[@id="topSection"]/div[2]/div[1]/h1') %>%      
+             html_text()
+    
+    tomatometer_score <- page %>%
+        html_nodes(xpath='//*[(@id = "tomato_meter_link")]//*[contains(concat( " ", @class, " " ),
+                              concat( " ", "mop-ratings-wrap__percentage", " " ))]') %>%
+        html_text() %>%
+        str_replace_all("\n","") %>% 
+        str_replace_all("%","") %>% 
+        str_trim(side = c("both"))
+  
+    audience_score <- page %>%
+        html_nodes(xpath='//*[contains(concat( " ", @class, " " ), concat( " ", 
+                   "audience-score", " " ))]//*[contains(concat( " ", @class, " " ),
+                   concat( " ", "mop-ratings-wrap__percentage", " " ))]') %>%
+        html_text() %>%
+        str_replace_all("\n","" ) %>% 
+        str_replace_all("%","") %>% 
+        str_trim(side = c("both"))
+
+    if (length(tomatometer_score) > 0) {
+      if (length(audience_score) > 0) {
+        data.frame(title,tomatometer_score,audience_score)
+      }
+    }
+}
+score_frame <- do.call("rbind", lapply(links_path, get_urlData))
+head(score_frame, 6)
+library("ggplot2")
+score_frame$audience_score <- strtoi(score_frame$audience_score)
+score_frame$tomatometer_score <- strtoi(score_frame$tomatometer_score)
+ggplot(score_frame, aes(y = reorder(title,audience_score), x = audience_score ))  +
+  geom_point(aes( color = "Audience Score")) + xlab("scores") + ylab("Movie Title") + 
+  geom_point(aes(y = title, x = tomatometer_score, color = "TomatoMeter Score"))+
+  labs(caption = "Data Source: Rotten tomatoes Website\n ") 
+```
+
+### 3. Weather
+
+[14 points]
+
+Data: `weather` dataset in **nycflights13** package (available on CRAN)
+
+```{r}
+# install.packages("ggplot2")
+library(ggplot2)
+
+#install.packages("nycflights13")
+weather_data <- nycflights13::weather
+
+```
+
+For parts (a) - (d) draw four plots of `wind_dir` vs. `humid` as indicated. For all, adjust parameters to the levels that provide the best views of the data.
+
+```{r}
+req_data <- weather_data[c("wind_dir", "humid")]
+
+```
+
+(a) Points with alpha blending
+
+```{r}
+#we use 'alpha' parameter in geom_point for this
+ggplot(req_data, aes(y = wind_dir, x = humid)) +
+    geom_point(alpha = 0.2, color = 'darkBlue', stroke = 0) +
+    ggtitle("Wind Direction vs Relative Humidity - Points with alpha blending") +
+    xlab("Relative Humidity") + ylab("Wind Direction (degrees)") + 
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    labs(caption = "Dataset: weather (nycflights13 package)
+                    Library: ggplot2")
+
+```
+
+
+(b) Points with alpha blending + density estimate contour lines
+
+```{r}
+ggplot(req_data, aes(y = wind_dir, x = humid)) +
+    geom_point(alpha = 0.2, color = 'darkBlue', stroke = 0) +
+    ggtitle("Wind Direction vs Relative Humidity - Points with alpha blending") +
+    xlab("Relative Humidity") + ylab("Wind Direction (egrees)") +
+    geom_contour(mapping = NULL, data = NULL, stat = "density2d",
+      position = "identity", lineend = "butt", linejoin = "round",
+      linemitre = 10, na.rm = FALSE, show.legend = NA,
+      inherit.aes = TRUE, color = 'black') +
+    theme(plot.title = element_text(size = 10, face = "bold")) +
+    labs(caption = "Dataset: weather (nycflights13 package)
+                    Library: ggplot2")
+
+
+```
+
+(c) Hexagonal heatmap of bin counts
+
+```{r}
+library(ggplot2)
+ggplot(data = req_data,mapping = aes(y = wind_dir, x = humid)) +
+    geom_hex(inherit.aes = TRUE, bins = 10, color = 'grey40') +
+    ggtitle("Wind Direction vs Relative Humidity -   Hexagonal heatmap of bin counts") +
+    xlab("Relative Humidity") + ylab("Wind Direction (degrees)") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  labs(caption = "Dataset: weather (nycflights13 package)
+                    Library: ggplot2")
+
+```
+
+(d) Square heatmap of bin counts 
+
+```{r}
+library(ggplot2)
+ggplot(req_data, aes(y = wind_dir, x = humid)) +
+    geom_bin2d(inherit.aes = TRUE, color = 'grey40', bins = 20) +
+    ggtitle("Wind Direction vs Humid -  Square heatmap of bin counts") +
+    xlab("Relative Humidity") + ylab("Wind Direction (degrees)") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  labs(caption = "Dataset: weather (nycflights13 package)
+                    Library: ggplot2")
+
+```
+
+(e) Describe noteworthy features of the data, using the "Movie ratings" example on page 82 (last page of Section 5.3) as a guide.  
+
+From graph of (a),
+1.	There are very few cases where humidity is less than 25 with wind direction between 0 and 200.
+2.	In the right extreme of the graph, the graph is unusual as there are no points in a little range (approximately 97.5 to 99) of Humid axis. Implies that humidity was never in this range.
+3.	Two more gaps that are similar are found in range 85 to 95 (approx.) of humidity recorded is observed on the graph.
+4.	There were comparatively less cases of the wind direction being in the range of 90 to 130. In this set again, there are less points on the plot with humidity less than 50.
+5.	By the darkness of the color, we can also say that the number of points in the range 30 to 60 on x-axis and 250 to 350 on the y-axis are more.
+
+From graph of (b),
+1. We know the regions that each curves in the plot tracks is the set of points that have the same number of points (count) at its location. So, this plot gives us an idea of how the density of the count is spread.
+2. It also helps us understand that there is not particular in which the density is distributed.
+
+From graph of (c),
+1.	From this we have an idea that the count is very less in the extremes of the shown ranges on both x-axis and y-axis.
+2.	The hexagons in the 45 to 55 over x-axis and 300 to s50 over y-axis seem to have the maximum count based on the color coding. 
+3.	From the graph, it is also very clear that there are no values recorded in certain ranges.
+
+From graph of (d),
+1.	We get a similar idea as with the graph of (c) but as we have more bins, it actually gives a better idea about the relative count in each region based on the shade of the color.
+2.	From this graph too, we know that certain region of the graph is not covered at all. This implies that no records have the wind direction and relative humidity data in those ranges. 
+
+
+
+
+(f) Draw a scatterplot of `humid` vs. `temp`. Why does the plot have diagonal lines?
+
+
+```{r}
+req_data_temp <- weather_data[c("temp", "humid")]
+
+ggplot(req_data_temp, aes(y = humid, x = temp)) +
+    geom_point(alpha = 0.2, color = 'darkBlue') +
+    ggtitle("Relative Humidity vs Temperature (F)") +
+    xlab("Temperature (F)") + ylab("Relative Humidity") +
+  theme(plot.title = element_text(size = 10, face = "bold")) +
+  labs(caption = "Dataset: weather (nycflights13 package)
+                    Library: ggplot2")
+
+```
+
+The temperature directly (proportionally) relates to the amount of moisture the atmosphere can hold. The extent of moisture in the air increases proportional to the temperature until the maximum possible moisture content is attained in the air. 
+As relative humidity is the ratio of the current absolute humidity to the highest possible absolute humidity (which depends on the current air temperature), there is a linear relation between the two parameters under consideration. Therefore, the plot has diagonal lines.
+
+
+(g) Draw a scatterplot matrix of the continuous variables in the `weather` dataset. Which pairs of variables are strongly positively associated and which are strongly negatively associated?
+
+```{r}
+pairs(weather_data[, 6:10], alpha=0.05, col = "darkBlue", pch = 20, 
+      main = "Scatterplot of continuous variables 
+      (Dataset: weather (nycflights13 package), Library: ggplot2)", 
+      labels = c(temp = "Temperature (F)", dewp = "Dew Point (F)",
+                 humid = "Relative Humidity", wind_dir = "Wind Direction (degrees)", 
+                 wind_speed = "Wind Speed (mph)"), cex.labels = 1 )# +
+
+```
+
+To understand the correlation between two variables, the entire data must be considered and plotted as observing the variation of one variable relative to the other is easy. Considering a sample may or may not be very useful. <br />
+Strongly positively associated:
+Temperature and Dew Point 
+Strongly negatively associated:
+As we observe the pllot, none of the variables seem to be strongly negatively associated. 
+
+
+(h) Color the points by `origin`.  Do any new patterns emerge?
+
+```{r}
+#install.packages("GGally")
+req_data_temp2 <- weather_data[c("origin", "temp", "dewp", "humid", "wind_dir", "wind_speed")]
+
+library(GGally)
+ggpairs(req_data_temp2, ggplot2::aes(col = origin), pch = 20, 
+      labels = c(temp = "Temperature (F)", dewp = "Dew Point (F)", humid = "Relative Humidity", 
+      wind_dir = "Wind Direction (degrees)", 
+      wind_speed = "Wind Speed (mph)"), upper = list(continuous = wrap("cor", size = 3)),
+    title = "Scatterplot matrix of the continuous variables (and origin) colored based on origin") +
+  labs(caption = "Dataset: weather (nycflights13 package)
+                    Library: GGally")
+```
+
+I included the origin in the dataset for plotting so that the origin column can be chosen to color by origin. So, the variable origin is also inclulded in the plot. 
+Yes, we can obeserve that there are strangely points with high wind speed in EWK airport. This pattern is not observed in the other two. Also, the temperature vs relative humidity, dew point vs relative humidity, wind direction vs each of the temperature, dwep, and relative humidity have points corresponding to JFK and EWR only at the borders in high numbers. There are very few points that correspond to these two airports and are towards central region of the plot. Also, most of the data corresponds to LGA airport because the color corresponding to LGA is seen the most. 
+
